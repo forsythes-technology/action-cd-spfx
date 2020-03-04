@@ -1279,6 +1279,13 @@ module.exports._enoent = enoent;
 
 /***/ }),
 
+/***/ 34:
+/***/ (function(module) {
+
+module.exports = require("https");
+
+/***/ }),
+
 /***/ 39:
 /***/ (function(module) {
 
@@ -1366,98 +1373,6 @@ const windowsRelease = release => {
 
 module.exports = windowsRelease;
 
-
-/***/ }),
-
-/***/ 82:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const fs = __importStar(__webpack_require__(747));
-const core_1 = __webpack_require__(470);
-const path_1 = __webpack_require__(622);
-const internal_utils_1 = __webpack_require__(931);
-/**
- * Creates a specification that describes how each file that is part of the artifact will be uploaded
- * @param artifactName the name of the artifact being uploaded. Used during upload to denote where the artifact is stored on the server
- * @param rootDirectory an absolute file path that denotes the path that should be removed from the beginning of each artifact file
- * @param artifactFiles a list of absolute file paths that denote what should be uploaded as part of the artifact
- */
-function getUploadSpecification(artifactName, rootDirectory, artifactFiles) {
-    internal_utils_1.checkArtifactName(artifactName);
-    const specifications = [];
-    if (!fs.existsSync(rootDirectory)) {
-        throw new Error(`Provided rootDirectory ${rootDirectory} does not exist`);
-    }
-    if (!fs.lstatSync(rootDirectory).isDirectory()) {
-        throw new Error(`Provided rootDirectory ${rootDirectory} is not a valid directory`);
-    }
-    // Normalize and resolve, this allows for either absolute or relative paths to be used
-    rootDirectory = path_1.normalize(rootDirectory);
-    rootDirectory = path_1.resolve(rootDirectory);
-    /*
-       Example to demonstrate behavior
-       
-       Input:
-         artifactName: my-artifact
-         rootDirectory: '/home/user/files/plz-upload'
-         artifactFiles: [
-           '/home/user/files/plz-upload/file1.txt',
-           '/home/user/files/plz-upload/file2.txt',
-           '/home/user/files/plz-upload/dir/file3.txt'
-         ]
-       
-       Output:
-         specifications: [
-           ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file1.txt'],
-           ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file2.txt'],
-           ['/home/user/files/plz-upload/file1.txt', 'my-artifact/dir/file3.txt']
-         ]
-    */
-    for (let file of artifactFiles) {
-        if (!fs.existsSync(file)) {
-            throw new Error(`File ${file} does not exist`);
-        }
-        if (!fs.lstatSync(file).isDirectory()) {
-            // Normalize and resolve, this allows for either absolute or relative paths to be used
-            file = path_1.normalize(file);
-            file = path_1.resolve(file);
-            if (!file.startsWith(rootDirectory)) {
-                throw new Error(`The rootDirectory: ${rootDirectory} is not a parent directory of the file: ${file}`);
-            }
-            /*
-              uploadFilePath denotes where the file will be uploaded in the file container on the server. During a run, if multiple artifacts are uploaded, they will all
-              be saved in the same container. The artifact name is used as the root directory in the container to separate and distinguish uploaded artifacts
-      
-              path.join handles all the following cases and would return 'artifact-name/file-to-upload.txt
-                join('artifact-name/', 'file-to-upload.txt')
-                join('artifact-name/', '/file-to-upload.txt')
-                join('artifact-name', 'file-to-upload.txt')
-                join('artifact-name', '/file-to-upload.txt')
-            */
-            specifications.push({
-                absoluteFilePath: file,
-                uploadFilePath: path_1.join(artifactName, file.replace(rootDirectory, ''))
-            });
-        }
-        else {
-            // Directories are rejected by the server during upload
-            core_1.debug(`Removing ${file} from rawSearchResults because it is a directory`);
-        }
-    }
-    return specifications;
-}
-exports.getUploadSpecification = getUploadSpecification;
-//# sourceMappingURL=internal-upload-specification.js.map
 
 /***/ }),
 
@@ -2418,143 +2333,6 @@ module.exports = require("child_process");
 
 /***/ }),
 
-/***/ 130:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const fs = __importStar(__webpack_require__(747));
-const internal_utils_1 = __webpack_require__(931);
-const url_1 = __webpack_require__(835);
-const internal_config_variables_1 = __webpack_require__(717);
-const core_1 = __webpack_require__(470);
-/**
- * Gets a list of all artifacts that are in a specific container
- */
-function listArtifacts() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const artifactUrl = internal_utils_1.getArtifactUrl();
-        const client = internal_utils_1.createHttpClient();
-        const requestOptions = internal_utils_1.getRequestOptions('application/json');
-        const rawResponse = yield client.get(artifactUrl, requestOptions);
-        const body = yield rawResponse.readBody();
-        if (internal_utils_1.isSuccessStatusCode(rawResponse.message.statusCode) && body) {
-            return JSON.parse(body);
-        }
-        // eslint-disable-next-line no-console
-        console.log(rawResponse);
-        throw new Error(`Unable to list artifacts for the run`);
-    });
-}
-exports.listArtifacts = listArtifacts;
-/**
- * Fetches a set of container items that describe the contents of an artifact
- * @param artifactName the name of the artifact
- * @param containerUrl the artifact container URL for the run
- */
-function getContainerItems(artifactName, containerUrl) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // The itemPath search parameter controls which containers will be returned
-        const resourceUrl = new url_1.URL(containerUrl);
-        resourceUrl.searchParams.append('itemPath', artifactName);
-        const client = internal_utils_1.createHttpClient();
-        const rawResponse = yield client.get(resourceUrl.toString());
-        const body = yield rawResponse.readBody();
-        if (internal_utils_1.isSuccessStatusCode(rawResponse.message.statusCode) && body) {
-            return JSON.parse(body);
-        }
-        // eslint-disable-next-line no-console
-        console.log(rawResponse);
-        throw new Error(`Unable to get ContainersItems from ${resourceUrl}`);
-    });
-}
-exports.getContainerItems = getContainerItems;
-/**
- * Concurrently downloads all the files that are part of an artifact
- * @param downloadItems information about what items to download and where to save them
- */
-function downloadSingleArtifact(downloadItems) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const DOWNLOAD_CONCURRENCY = internal_config_variables_1.getDownloadFileConcurrency();
-        // Limit the number of files downloaded at a single time
-        const parallelDownloads = [...new Array(DOWNLOAD_CONCURRENCY).keys()];
-        const client = internal_utils_1.createHttpClient();
-        let downloadedFiles = 0;
-        yield Promise.all(parallelDownloads.map(() => __awaiter(this, void 0, void 0, function* () {
-            while (downloadedFiles < downloadItems.length) {
-                const currentFileToDownload = downloadItems[downloadedFiles];
-                downloadedFiles += 1;
-                yield downloadIndividualFile(client, currentFileToDownload.sourceLocation, currentFileToDownload.targetPath);
-            }
-        })));
-    });
-}
-exports.downloadSingleArtifact = downloadSingleArtifact;
-/**
- * Downloads an individual file
- * @param client http client that will be used to make the necessary calls
- * @param artifactLocation origin location where a file will be downloaded from
- * @param downloadPath destination location for the file being downloaded
- */
-function downloadIndividualFile(client, artifactLocation, downloadPath) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const stream = fs.createWriteStream(downloadPath);
-        const response = yield client.get(artifactLocation);
-        if (internal_utils_1.isSuccessStatusCode(response.message.statusCode)) {
-            yield pipeResponseToStream(response, stream);
-        }
-        else if (internal_utils_1.isRetryableStatusCode(response.message.statusCode)) {
-            core_1.warning(`Received http ${response.message.statusCode} during file download, will retry ${artifactLocation} after 10 seconds`);
-            yield new Promise(resolve => setTimeout(resolve, 10000));
-            const retryResponse = yield client.get(artifactLocation);
-            if (internal_utils_1.isSuccessStatusCode(retryResponse.message.statusCode)) {
-                yield pipeResponseToStream(response, stream);
-            }
-            else {
-                // eslint-disable-next-line no-console
-                console.log(retryResponse);
-                throw new Error(`Unable to download ${artifactLocation}`);
-            }
-        }
-        else {
-            // eslint-disable-next-line no-console
-            console.log(response);
-            throw new Error(`Unable to download ${artifactLocation}`);
-        }
-    });
-}
-exports.downloadIndividualFile = downloadIndividualFile;
-function pipeResponseToStream(response, stream) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return new Promise(resolve => {
-            response.message.pipe(stream).on('close', () => {
-                resolve();
-            });
-        });
-    });
-}
-exports.pipeResponseToStream = pipeResponseToStream;
-//# sourceMappingURL=internal-download-http-client.js.map
-
-/***/ }),
-
 /***/ 131:
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
@@ -2577,22 +2355,21 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const artifact = __importStar(__webpack_require__(214));
 const core = __importStar(__webpack_require__(470));
 const exec_1 = __webpack_require__(986);
 const github = __importStar(__webpack_require__(469));
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        const octopusUrl = core.getInput("OCTOPUS_URL", { required: true });
-        const octopusApiKey = core.getInput("OCTOPUS_APIKEY", { required: true });
-        const solutionPath = core.getInput("SOLUTION_PATH", { required: true });
-        const project = core.getInput("PROJECT", { required: false });
-        const deployTo = core.getInput("DEPLOY_TO", { required: false });
-        const msTeamsWebhook = core.getInput("MS_TEAMS_WEBHOOK", { required: false });
-        const context = github.context;
-        const repo = context.repo.repo;
-        const projectName = project ? project : repo;
         try {
+            const octopusUrl = core.getInput("OCTOPUS_URL", { required: true });
+            const octopusApiKey = core.getInput("OCTOPUS_APIKEY", { required: true });
+            const solutionPath = core.getInput("SOLUTION_PATH", { required: true });
+            const project = core.getInput("PROJECT", { required: false });
+            const deployTo = core.getInput("DEPLOY_TO", { required: false });
+            const msTeamsWebhook = core.getInput("MS_TEAMS_WEBHOOK", { required: false });
+            const context = github.context;
+            const repo = context.repo.repo;
+            const projectName = project ? project : repo;
             if (context.ref.indexOf("refs/tags/") === -1) {
                 throw new Error("Unable to get a version number");
             }
@@ -2614,27 +2391,8 @@ function main() {
         }
         catch (err) {
             core.error("❌ Failed");
-            if (msTeamsWebhook) {
-                sendTeamsNotification(projectName, `Failed to deploy to Octopus (ref: ${context.ref}) `, msTeamsWebhook);
-            }
             core.setFailed(err.message);
         }
-    });
-}
-function downloadArtifact(artifactName) {
-    return __awaiter(this, void 0, void 0, function* () {
-        core.info(`Downloading package artifact ${artifactName}...`);
-        const artifactClient = artifact.create();
-        try {
-            const response = yield artifactClient.downloadArtifact(artifactName);
-            core.info(`Downloaded ${response.artifactName}`);
-        }
-        catch (error) {
-            core.error("❌ Could not retrieve artifact");
-            core.setFailed(error.message);
-        }
-        yield exec_1.exec(`ls`);
-        yield exec_1.exec(`pwd`);
     });
 }
 /**
@@ -2663,7 +2421,7 @@ main();
 var net = __webpack_require__(631);
 var tls = __webpack_require__(16);
 var http = __webpack_require__(605);
-var https = __webpack_require__(211);
+var https = __webpack_require__(34);
 var events = __webpack_require__(614);
 var assert = __webpack_require__(357);
 var util = __webpack_require__(669);
@@ -3160,66 +2918,6 @@ function authenticationPlugin(octokit, options) {
 
 /***/ }),
 
-/***/ 195:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const path = __importStar(__webpack_require__(622));
-/**
- * Creates a specification for a set of files that will be downloaded
- * @param artifactName the name of the artifact
- * @param artifactEntries a set of container entries that describe that files that make up an artifact
- * @param downloadPath the path where the artifact will be downloaded to
- * @param includeRootDirectory specifies if there should be an extra directory (denoted by the artifact name) where the artifact files should be downloaded to
- */
-function getDownloadSpecification(artifactName, artifactEntries, downloadPath, includeRootDirectory) {
-    const directories = new Set();
-    const specifications = {
-        rootDownloadLocation: includeRootDirectory
-            ? path.join(downloadPath, artifactName)
-            : downloadPath,
-        directoryStructure: [],
-        filesToDownload: []
-    };
-    for (const entry of artifactEntries) {
-        // Ignore artifacts in the container that don't begin with the same name
-        if (entry.path.startsWith(`${artifactName}/`) ||
-            entry.path.startsWith(`${artifactName}\\`)) {
-            // normalize all separators to the local OS
-            const normalizedPathEntry = path.normalize(entry.path);
-            // entry.path always starts with the artifact name, if includeRootDirectory is false, remove the name from the beginning of the path
-            const filePath = path.join(downloadPath, includeRootDirectory
-                ? normalizedPathEntry
-                : normalizedPathEntry.replace(artifactName, ''));
-            // Case insensitive folder structure maintained in the backend, not every folder is created so the 'folder'
-            // itemType cannot be relied upon. The file must be used to determine the directory structure
-            if (entry.itemType === 'file') {
-                // Get the directories that we need to create from the filePath for each individual file
-                directories.add(path.dirname(filePath));
-                specifications.filesToDownload.push({
-                    sourceLocation: entry.contentLocation,
-                    targetPath: filePath
-                });
-            }
-        }
-    }
-    specifications.directoryStructure = Array.from(directories);
-    return specifications;
-}
-exports.getDownloadSpecification = getDownloadSpecification;
-//# sourceMappingURL=internal-download-specification.js.map
-
-/***/ }),
-
 /***/ 197:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -3269,27 +2967,32 @@ function checkMode (stat, options) {
 /***/ }),
 
 /***/ 211:
-/***/ (function(module) {
-
-module.exports = require("https");
-
-/***/ }),
-
-/***/ 214:
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
-const internal_artifact_client_1 = __webpack_require__(369);
-/**
- * Constructs an ArtifactClient
- */
-function create() {
-    return internal_artifact_client_1.DefaultArtifactClient.create();
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var osName = _interopDefault(__webpack_require__(2));
+
+function getUserAgent() {
+  try {
+    return `Node.js/${process.version.substr(1)} (${osName()}; ${process.arch})`;
+  } catch (error) {
+    if (/wmic os get Caption/.test(error.message)) {
+      return "Windows <version undetectable>";
+    }
+
+    return "<environment undetectable>";
+  }
 }
-exports.create = create;
-//# sourceMappingURL=artifact-client.js.map
+
+exports.getUserAgent = getUserAgent;
+//# sourceMappingURL=index.js.map
+
 
 /***/ }),
 
@@ -3297,69 +3000,6 @@ exports.create = create;
 /***/ (function(module) {
 
 module.exports = {"name":"@octokit/rest","version":"16.43.1","publishConfig":{"access":"public"},"description":"GitHub REST API client for Node.js","keywords":["octokit","github","rest","api-client"],"author":"Gregor Martynus (https://github.com/gr2m)","contributors":[{"name":"Mike de Boer","email":"info@mikedeboer.nl"},{"name":"Fabian Jakobs","email":"fabian@c9.io"},{"name":"Joe Gallo","email":"joe@brassafrax.com"},{"name":"Gregor Martynus","url":"https://github.com/gr2m"}],"repository":"https://github.com/octokit/rest.js","dependencies":{"@octokit/auth-token":"^2.4.0","@octokit/plugin-paginate-rest":"^1.1.1","@octokit/plugin-request-log":"^1.0.0","@octokit/plugin-rest-endpoint-methods":"2.4.0","@octokit/request":"^5.2.0","@octokit/request-error":"^1.0.2","atob-lite":"^2.0.0","before-after-hook":"^2.0.0","btoa-lite":"^1.0.0","deprecation":"^2.0.0","lodash.get":"^4.4.2","lodash.set":"^4.3.2","lodash.uniq":"^4.5.0","octokit-pagination-methods":"^1.1.0","once":"^1.4.0","universal-user-agent":"^4.0.0"},"devDependencies":{"@gimenete/type-writer":"^0.1.3","@octokit/auth":"^1.1.1","@octokit/fixtures-server":"^5.0.6","@octokit/graphql":"^4.2.0","@types/node":"^13.1.0","bundlesize":"^0.18.0","chai":"^4.1.2","compression-webpack-plugin":"^3.1.0","cypress":"^3.0.0","glob":"^7.1.2","http-proxy-agent":"^4.0.0","lodash.camelcase":"^4.3.0","lodash.merge":"^4.6.1","lodash.upperfirst":"^4.3.1","lolex":"^5.1.2","mkdirp":"^1.0.0","mocha":"^7.0.1","mustache":"^4.0.0","nock":"^11.3.3","npm-run-all":"^4.1.2","nyc":"^15.0.0","prettier":"^1.14.2","proxy":"^1.0.0","semantic-release":"^17.0.0","sinon":"^8.0.0","sinon-chai":"^3.0.0","sort-keys":"^4.0.0","string-to-arraybuffer":"^1.0.0","string-to-jsdoc-comment":"^1.0.0","typescript":"^3.3.1","webpack":"^4.0.0","webpack-bundle-analyzer":"^3.0.0","webpack-cli":"^3.0.0"},"types":"index.d.ts","scripts":{"coverage":"nyc report --reporter=html && open coverage/index.html","lint":"prettier --check '{lib,plugins,scripts,test}/**/*.{js,json,ts}' 'docs/*.{js,json}' 'docs/src/**/*' index.js README.md package.json","lint:fix":"prettier --write '{lib,plugins,scripts,test}/**/*.{js,json,ts}' 'docs/*.{js,json}' 'docs/src/**/*' index.js README.md package.json","pretest":"npm run -s lint","test":"nyc mocha test/mocha-node-setup.js \"test/*/**/*-test.js\"","test:browser":"cypress run --browser chrome","build":"npm-run-all build:*","build:ts":"npm run -s update-endpoints:typescript","prebuild:browser":"mkdirp dist/","build:browser":"npm-run-all build:browser:*","build:browser:development":"webpack --mode development --entry . --output-library=Octokit --output=./dist/octokit-rest.js --profile --json > dist/bundle-stats.json","build:browser:production":"webpack --mode production --entry . --plugin=compression-webpack-plugin --output-library=Octokit --output-path=./dist --output-filename=octokit-rest.min.js --devtool source-map","generate-bundle-report":"webpack-bundle-analyzer dist/bundle-stats.json --mode=static --no-open --report dist/bundle-report.html","update-endpoints":"npm-run-all update-endpoints:*","update-endpoints:fetch-json":"node scripts/update-endpoints/fetch-json","update-endpoints:typescript":"node scripts/update-endpoints/typescript","prevalidate:ts":"npm run -s build:ts","validate:ts":"tsc --target es6 --noImplicitAny index.d.ts","postvalidate:ts":"tsc --noEmit --target es6 test/typescript-validate.ts","start-fixtures-server":"octokit-fixtures-server"},"license":"MIT","files":["index.js","index.d.ts","lib","plugins"],"nyc":{"ignore":["test"]},"release":{"publish":["@semantic-release/npm",{"path":"@semantic-release/github","assets":["dist/*","!dist/*.map.gz"]}]},"bundlesize":[{"path":"./dist/octokit-rest.min.js.gz","maxSize":"33 kB"}]};
-
-/***/ }),
-
-/***/ 226:
-/***/ (function(__unusedmodule, exports) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-class BasicCredentialHandler {
-    constructor(username, password) {
-        this.username = username;
-        this.password = password;
-    }
-    prepareRequest(options) {
-        options.headers['Authorization'] = 'Basic ' + Buffer.from(this.username + ':' + this.password).toString('base64');
-    }
-    // This handler cannot handle 401
-    canHandleAuthentication(response) {
-        return false;
-    }
-    handleAuthentication(httpClient, requestInfo, objs) {
-        return null;
-    }
-}
-exports.BasicCredentialHandler = BasicCredentialHandler;
-class BearerCredentialHandler {
-    constructor(token) {
-        this.token = token;
-    }
-    // currently implements pre-authorization
-    // TODO: support preAuth = false where it hooks on 401
-    prepareRequest(options) {
-        options.headers['Authorization'] = 'Bearer ' + this.token;
-    }
-    // This handler cannot handle 401
-    canHandleAuthentication(response) {
-        return false;
-    }
-    handleAuthentication(httpClient, requestInfo, objs) {
-        return null;
-    }
-}
-exports.BearerCredentialHandler = BearerCredentialHandler;
-class PersonalAccessTokenCredentialHandler {
-    constructor(token) {
-        this.token = token;
-    }
-    // currently implements pre-authorization
-    // TODO: support preAuth = false where it hooks on 401
-    prepareRequest(options) {
-        options.headers['Authorization'] = 'Basic ' + Buffer.from('PAT:' + this.token).toString('base64');
-    }
-    // This handler cannot handle 401
-    canHandleAuthentication(response) {
-        return false;
-    }
-    handleAuthentication(httpClient, requestInfo, objs) {
-        return null;
-    }
-}
-exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHandler;
-
 
 /***/ }),
 
@@ -5769,162 +5409,6 @@ module.exports = function atob(str) {
 
 /***/ }),
 
-/***/ 369:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const core = __importStar(__webpack_require__(470));
-const internal_upload_specification_1 = __webpack_require__(82);
-const internal_upload_http_client_1 = __webpack_require__(715);
-const internal_utils_1 = __webpack_require__(931);
-const internal_download_http_client_1 = __webpack_require__(130);
-const internal_download_specification_1 = __webpack_require__(195);
-const internal_config_variables_1 = __webpack_require__(717);
-const path_1 = __webpack_require__(622);
-class DefaultArtifactClient {
-    /**
-     * Constructs a DefaultArtifactClient
-     */
-    static create() {
-        return new DefaultArtifactClient();
-    }
-    /**
-     * Uploads an artifact
-     */
-    uploadArtifact(name, files, rootDirectory, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            internal_utils_1.checkArtifactName(name);
-            // Get specification for the files being uploaded
-            const uploadSpecification = internal_upload_specification_1.getUploadSpecification(name, rootDirectory, files);
-            const uploadResponse = {
-                artifactName: name,
-                artifactItems: [],
-                size: 0,
-                failedItems: []
-            };
-            if (uploadSpecification.length === 0) {
-                core.warning(`No files found that can be uploaded`);
-            }
-            else {
-                // Create an entry for the artifact in the file container
-                const response = yield internal_upload_http_client_1.createArtifactInFileContainer(name);
-                if (!response.fileContainerResourceUrl) {
-                    core.debug(response.toString());
-                    throw new Error('No URL provided by the Artifact Service to upload an artifact to');
-                }
-                core.debug(`Upload Resource URL: ${response.fileContainerResourceUrl}`);
-                // Upload each of the files that were found concurrently
-                const uploadResult = yield internal_upload_http_client_1.uploadArtifactToFileContainer(response.fileContainerResourceUrl, uploadSpecification, options);
-                //Update the size of the artifact to indicate we are done uploading
-                yield internal_upload_http_client_1.patchArtifactSize(uploadResult.size, name);
-                core.info(`Finished uploading artifact ${name}. Reported size is ${uploadResult.size} bytes. There were ${uploadResult.failedItems.length} items that failed to upload`);
-                uploadResponse.artifactItems = uploadSpecification.map(item => item.absoluteFilePath);
-                uploadResponse.size = uploadResult.size;
-                uploadResponse.failedItems = uploadResult.failedItems;
-            }
-            return uploadResponse;
-        });
-    }
-    downloadArtifact(name, path, options) {
-        var _a;
-        return __awaiter(this, void 0, void 0, function* () {
-            const artifacts = yield internal_download_http_client_1.listArtifacts();
-            if (artifacts.count === 0) {
-                throw new Error(`Unable to find any artifacts for the associated workflow`);
-            }
-            const artifactToDownload = artifacts.value.find(artifact => {
-                return artifact.name === name;
-            });
-            if (!artifactToDownload) {
-                throw new Error(`Unable to find an artifact with the name: ${name}`);
-            }
-            const items = yield internal_download_http_client_1.getContainerItems(artifactToDownload.name, artifactToDownload.fileContainerResourceUrl);
-            if (!path) {
-                path = internal_config_variables_1.getWorkSpaceDirectory();
-            }
-            path = path_1.normalize(path);
-            path = path_1.resolve(path);
-            // During upload, empty directories are rejected by the remote server so there should be no artifacts that consist of only empty directories
-            const downloadSpecification = internal_download_specification_1.getDownloadSpecification(name, items.value, path, ((_a = options) === null || _a === void 0 ? void 0 : _a.createArtifactFolder) || false);
-            if (downloadSpecification.filesToDownload.length === 0) {
-                core.info(`No downloadable files were found for the artifact: ${artifactToDownload.name}`);
-            }
-            else {
-                // Create all necessary directories recursively before starting any download
-                yield internal_utils_1.createDirectoriesForArtifact(downloadSpecification.directoryStructure);
-                yield internal_download_http_client_1.downloadSingleArtifact(downloadSpecification.filesToDownload);
-            }
-            return {
-                artifactName: name,
-                downloadPath: downloadSpecification.rootDownloadLocation
-            };
-        });
-    }
-    downloadAllArtifacts(path) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const response = [];
-            const artifacts = yield internal_download_http_client_1.listArtifacts();
-            if (artifacts.count === 0) {
-                core.info('Unable to find any artifacts for the associated workflow');
-                return response;
-            }
-            if (!path) {
-                path = internal_config_variables_1.getWorkSpaceDirectory();
-            }
-            path = path_1.normalize(path);
-            path = path_1.resolve(path);
-            const ARTIFACT_CONCURRENCY = internal_config_variables_1.getDownloadArtifactConcurrency();
-            const parallelDownloads = [...new Array(ARTIFACT_CONCURRENCY).keys()];
-            let downloadedArtifacts = 0;
-            yield Promise.all(parallelDownloads.map(() => __awaiter(this, void 0, void 0, function* () {
-                while (downloadedArtifacts < artifacts.count) {
-                    const currentArtifactToDownload = artifacts.value[downloadedArtifacts];
-                    downloadedArtifacts += 1;
-                    // Get container entries for the specific artifact
-                    const items = yield internal_download_http_client_1.getContainerItems(currentArtifactToDownload.name, currentArtifactToDownload.fileContainerResourceUrl);
-                    // Promise.All is not correctly inferring that 'path' is no longer possibly undefined: https://github.com/microsoft/TypeScript/issues/34925
-                    const downloadSpecification = internal_download_specification_1.getDownloadSpecification(currentArtifactToDownload.name, items.value, path, // eslint-disable-line @typescript-eslint/no-non-null-assertion
-                    true);
-                    if (downloadSpecification.filesToDownload.length === 0) {
-                        core.info(`No downloadable files were found for any artifact ${currentArtifactToDownload.name}`);
-                    }
-                    else {
-                        yield internal_utils_1.createDirectoriesForArtifact(downloadSpecification.directoryStructure);
-                        yield internal_download_http_client_1.downloadSingleArtifact(downloadSpecification.filesToDownload);
-                    }
-                    response.push({
-                        artifactName: currentArtifactToDownload.name,
-                        downloadPath: downloadSpecification.rootDownloadLocation
-                    });
-                }
-            })));
-            return response;
-        });
-    }
-}
-exports.DefaultArtifactClient = DefaultArtifactClient;
-//# sourceMappingURL=internal-artifact-client.js.map
-
-/***/ }),
-
 /***/ 370:
 /***/ (function(module) {
 
@@ -6371,36 +5855,6 @@ module.exports = readShebang;
 
 /***/ }),
 
-/***/ 392:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
-
-var osName = _interopDefault(__webpack_require__(2));
-
-function getUserAgent() {
-  try {
-    return `Node.js/${process.version.substr(1)} (${osName()}; ${process.arch})`;
-  } catch (error) {
-    if (/wmic os get Caption/.test(error.message)) {
-      return "Windows <version undetectable>";
-    }
-
-    return "<environment undetectable>";
-  }
-}
-
-exports.getUserAgent = getUserAgent;
-//# sourceMappingURL=index.js.map
-
-
-/***/ }),
-
 /***/ 402:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -6438,10 +5892,9 @@ function Octokit(plugins, options) {
 /***/ }),
 
 /***/ 413:
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ (function(module) {
 
-module.exports = __webpack_require__(141);
-
+module.exports = require("stream");
 
 /***/ }),
 
@@ -6690,10 +6143,10 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var Stream = _interopDefault(__webpack_require__(794));
+var Stream = _interopDefault(__webpack_require__(413));
 var http = _interopDefault(__webpack_require__(605));
 var Url = _interopDefault(__webpack_require__(835));
-var https = _interopDefault(__webpack_require__(211));
+var https = _interopDefault(__webpack_require__(34));
 var zlib = _interopDefault(__webpack_require__(761));
 
 // Based on https://github.com/tmpvar/jsdom/blob/aa85b2abf07766ff7bf5c1f6daafb3726f2f2db5/lib/jsdom/living/blob.js
@@ -9016,7 +8469,7 @@ function hasFirstPage (link) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const url = __webpack_require__(835);
 const http = __webpack_require__(605);
-const https = __webpack_require__(211);
+const https = __webpack_require__(34);
 const pm = __webpack_require__(950);
 let tunnel;
 var HttpCodes;
@@ -9398,7 +8851,7 @@ class HttpClient {
         if (useProxy) {
             // If using proxy, need tunnel
             if (!tunnel) {
-                tunnel = __webpack_require__(413);
+                tunnel = __webpack_require__(856);
             }
             const agentOptions = {
                 maxSockets: maxSockets,
@@ -10279,319 +9732,6 @@ module.exports = (promise, onFinally) => {
 
 /***/ }),
 
-/***/ 715:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const core_1 = __webpack_require__(470);
-const fs = __importStar(__webpack_require__(747));
-const url_1 = __webpack_require__(835);
-const internal_utils_1 = __webpack_require__(931);
-const internal_config_variables_1 = __webpack_require__(717);
-/**
- * Creates a file container for the new artifact in the remote blob storage/file service
- * @param {string} artifactName Name of the artifact being created
- * @returns The response from the Artifact Service if the file container was successfully created
- */
-function createArtifactInFileContainer(artifactName) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const parameters = {
-            Type: 'actions_storage',
-            Name: artifactName
-        };
-        const data = JSON.stringify(parameters, null, 2);
-        const artifactUrl = internal_utils_1.getArtifactUrl();
-        const client = internal_utils_1.createHttpClient();
-        const requestOptions = internal_utils_1.getRequestOptions('application/json');
-        const rawResponse = yield client.post(artifactUrl, data, requestOptions);
-        const body = yield rawResponse.readBody();
-        if (internal_utils_1.isSuccessStatusCode(rawResponse.message.statusCode) && body) {
-            return JSON.parse(body);
-        }
-        else {
-            // eslint-disable-next-line no-console
-            console.log(rawResponse);
-            throw new Error(`Unable to create a container for the artifact ${artifactName}`);
-        }
-    });
-}
-exports.createArtifactInFileContainer = createArtifactInFileContainer;
-/**
- * Concurrently upload all of the files in chunks
- * @param {string} uploadUrl Base Url for the artifact that was created
- * @param {SearchResult[]} filesToUpload A list of information about the files being uploaded
- * @returns The size of all the files uploaded in bytes
- */
-function uploadArtifactToFileContainer(uploadUrl, filesToUpload, options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const client = internal_utils_1.createHttpClient();
-        const FILE_CONCURRENCY = internal_config_variables_1.getUploadFileConcurrency();
-        const CHUNK_CONCURRENCY = internal_config_variables_1.getUploadChunkConcurrency();
-        const MAX_CHUNK_SIZE = internal_config_variables_1.getUploadChunkSize();
-        core_1.debug(`File Concurrency: ${FILE_CONCURRENCY}, Chunk Concurrency: ${CHUNK_CONCURRENCY} and Chunk Size: ${MAX_CHUNK_SIZE}`);
-        const parameters = [];
-        // by default, file uploads will continue if there is an error unless specified differently in the options
-        let continueOnError = true;
-        if (options) {
-            if (options.continueOnError === false) {
-                continueOnError = false;
-            }
-        }
-        // Prepare the necessary parameters to upload all the files
-        for (const file of filesToUpload) {
-            const resourceUrl = new url_1.URL(uploadUrl);
-            resourceUrl.searchParams.append('itemPath', file.uploadFilePath);
-            parameters.push({
-                file: file.absoluteFilePath,
-                resourceUrl: resourceUrl.toString(),
-                restClient: client,
-                concurrency: CHUNK_CONCURRENCY,
-                maxChunkSize: MAX_CHUNK_SIZE,
-                continueOnError
-            });
-        }
-        const parallelUploads = [...new Array(FILE_CONCURRENCY).keys()];
-        const failedItemsToReport = [];
-        let uploadedFiles = 0;
-        let fileSizes = 0;
-        let abortPendingFileUploads = false;
-        // Only allow a certain amount of files to be uploaded at once, this is done to reduce potential errors
-        yield Promise.all(parallelUploads.map(() => __awaiter(this, void 0, void 0, function* () {
-            while (uploadedFiles < filesToUpload.length) {
-                const currentFileParameters = parameters[uploadedFiles];
-                uploadedFiles += 1;
-                if (abortPendingFileUploads) {
-                    failedItemsToReport.push(currentFileParameters.file);
-                    continue;
-                }
-                const uploadFileResult = yield uploadFileAsync(currentFileParameters);
-                fileSizes += uploadFileResult.successfulUploadSize;
-                if (uploadFileResult.isSuccess === false) {
-                    failedItemsToReport.push(currentFileParameters.file);
-                    if (!continueOnError) {
-                        // Existing uploads will be able to finish however all pending uploads will fail fast
-                        abortPendingFileUploads = true;
-                    }
-                }
-            }
-        })));
-        core_1.info(`Total size of all the files uploaded is ${fileSizes} bytes`);
-        return {
-            size: fileSizes,
-            failedItems: failedItemsToReport
-        };
-    });
-}
-exports.uploadArtifactToFileContainer = uploadArtifactToFileContainer;
-/**
- * Asynchronously uploads a file. If the file is bigger than the max chunk size it will be uploaded via multiple calls
- * @param {UploadFileParameters} parameters Information about the file that needs to be uploaded
- * @returns The size of the file that was uploaded in bytes along with any failed uploads
- */
-function uploadFileAsync(parameters) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const fileSize = fs.statSync(parameters.file).size;
-        const parallelUploads = [...new Array(parameters.concurrency).keys()];
-        let offset = 0;
-        let isUploadSuccessful = true;
-        let failedChunkSizes = 0;
-        let abortFileUpload = false;
-        yield Promise.all(parallelUploads.map(() => __awaiter(this, void 0, void 0, function* () {
-            while (offset < fileSize) {
-                const chunkSize = Math.min(fileSize - offset, parameters.maxChunkSize);
-                if (abortFileUpload) {
-                    // if we don't want to continue on error, any pending upload chunk will be marked as failed
-                    failedChunkSizes += chunkSize;
-                    continue;
-                }
-                const start = offset;
-                const end = offset + chunkSize - 1;
-                offset += parameters.maxChunkSize;
-                const chunk = fs.createReadStream(parameters.file, {
-                    start,
-                    end,
-                    autoClose: false
-                });
-                const result = yield uploadChunk(parameters.restClient, parameters.resourceUrl, chunk, start, end, fileSize);
-                if (!result) {
-                    /**
-                     * Chunk failed to upload, report as failed and do not continue uploading any more chunks for the file. It is possible that part of a chunk was
-                     * successfully uploaded so the server may report a different size for what was uploaded
-                     **/
-                    isUploadSuccessful = false;
-                    failedChunkSizes += chunkSize;
-                    core_1.warning(`Aborting upload for ${parameters.file} due to failure`);
-                    abortFileUpload = true;
-                }
-            }
-        })));
-        return {
-            isSuccess: isUploadSuccessful,
-            successfulUploadSize: fileSize - failedChunkSizes
-        };
-    });
-}
-/**
- * Uploads a chunk of an individual file to the specified resourceUrl. If the upload fails and the status code
- * indicates a retryable status, we try to upload the chunk as well
- * @param {HttpClient} restClient RestClient that will be making the appropriate HTTP call
- * @param {string} resourceUrl Url of the resource that the chunk will be uploaded to
- * @param {NodeJS.ReadableStream} data Stream of the file that will be uploaded
- * @param {number} start Starting byte index of file that the chunk belongs to
- * @param {number} end Ending byte index of file that the chunk belongs to
- * @param {number} totalSize Total size of the file in bytes that is being uploaded
- * @returns if the chunk was successfully uploaded
- */
-function uploadChunk(restClient, resourceUrl, data, start, end, totalSize) {
-    return __awaiter(this, void 0, void 0, function* () {
-        core_1.info(`Uploading chunk of size ${end -
-            start +
-            1} bytes at offset ${start} with content range: ${internal_utils_1.getContentRange(start, end, totalSize)}`);
-        const requestOptions = internal_utils_1.getRequestOptions('application/octet-stream', totalSize, internal_utils_1.getContentRange(start, end, totalSize));
-        const uploadChunkRequest = () => __awaiter(this, void 0, void 0, function* () {
-            return yield restClient.sendStream('PUT', resourceUrl, data, requestOptions);
-        });
-        const response = yield uploadChunkRequest();
-        if (internal_utils_1.isSuccessStatusCode(response.message.statusCode)) {
-            core_1.debug(`Chunk for ${start}:${end} was successfully uploaded to ${resourceUrl}`);
-            return true;
-        }
-        else if (internal_utils_1.isRetryableStatusCode(response.message.statusCode)) {
-            core_1.info(`Received http ${response.message.statusCode} during chunk upload, will retry at offset ${start} after 10 seconds.`);
-            yield new Promise(resolve => setTimeout(resolve, 10000));
-            const retryResponse = yield uploadChunkRequest();
-            if (internal_utils_1.isSuccessStatusCode(retryResponse.message.statusCode)) {
-                return true;
-            }
-            else {
-                core_1.info(`Unable to upload chunk even after retrying`);
-                // eslint-disable-next-line no-console
-                console.log(response);
-                return false;
-            }
-        }
-        // Upload must have failed spectacularly somehow, log full result for diagnostic purposes
-        // eslint-disable-next-line no-console
-        console.log(response);
-        return false;
-    });
-}
-/**
- * Updates the size of the artifact from -1 which was initially set when the container was first created for the artifact.
- * Updating the size indicates that we are done uploading all the contents of the artifact. A server side check will be run
- * to check that the artifact size is correct for billing purposes
- */
-function patchArtifactSize(size, artifactName) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const client = internal_utils_1.createHttpClient();
-        const requestOptions = internal_utils_1.getRequestOptions('application/json');
-        const resourceUrl = new url_1.URL(internal_utils_1.getArtifactUrl());
-        resourceUrl.searchParams.append('artifactName', artifactName);
-        const parameters = { Size: size };
-        const data = JSON.stringify(parameters, null, 2);
-        core_1.debug(`URL is ${resourceUrl.toString()}`);
-        const rawResponse = yield client.patch(resourceUrl.toString(), data, requestOptions);
-        const body = yield rawResponse.readBody();
-        if (internal_utils_1.isSuccessStatusCode(rawResponse.message.statusCode)) {
-            core_1.debug(`Artifact ${artifactName} has been successfully uploaded, total size ${size}`);
-            core_1.debug(body);
-        }
-        else if (rawResponse.message.statusCode === 404) {
-            throw new Error(`An Artifact with the name ${artifactName} was not found`);
-        }
-        else {
-            // eslint-disable-next-line no-console
-            console.log(body);
-            throw new Error(`Unable to finish uploading artifact ${artifactName}`);
-        }
-    });
-}
-exports.patchArtifactSize = patchArtifactSize;
-//# sourceMappingURL=internal-upload-http-client.js.map
-
-/***/ }),
-
-/***/ 717:
-/***/ (function(__unusedmodule, exports) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-function getUploadFileConcurrency() {
-    return 2;
-}
-exports.getUploadFileConcurrency = getUploadFileConcurrency;
-function getUploadChunkConcurrency() {
-    return 1;
-}
-exports.getUploadChunkConcurrency = getUploadChunkConcurrency;
-function getUploadChunkSize() {
-    return 4 * 1024 * 1024; // 4 MB Chunks
-}
-exports.getUploadChunkSize = getUploadChunkSize;
-function getDownloadFileConcurrency() {
-    return 2;
-}
-exports.getDownloadFileConcurrency = getDownloadFileConcurrency;
-function getDownloadArtifactConcurrency() {
-    // when downloading all artifact at once, this is number of concurrent artifacts being downloaded
-    return 1;
-}
-exports.getDownloadArtifactConcurrency = getDownloadArtifactConcurrency;
-function getRuntimeToken() {
-    const token = process.env['ACTIONS_RUNTIME_TOKEN'];
-    if (!token) {
-        throw new Error('Unable to get ACTIONS_RUNTIME_TOKEN env variable');
-    }
-    return token;
-}
-exports.getRuntimeToken = getRuntimeToken;
-function getRuntimeUrl() {
-    const runtimeUrl = process.env['ACTIONS_RUNTIME_URL'];
-    if (!runtimeUrl) {
-        throw new Error('Unable to get ACTIONS_RUNTIME_URL env variable');
-    }
-    return runtimeUrl;
-}
-exports.getRuntimeUrl = getRuntimeUrl;
-function getWorkFlowRunId() {
-    const workFlowRunId = process.env['GITHUB_RUN_ID'];
-    if (!workFlowRunId) {
-        throw new Error('Unable to get GITHUB_RUN_ID env variable');
-    }
-    return workFlowRunId;
-}
-exports.getWorkFlowRunId = getWorkFlowRunId;
-function getWorkSpaceDirectory() {
-    const workspaceDirectory = process.env['GITHUB_WORKSPACE'];
-    if (!workspaceDirectory) {
-        throw new Error('Unable to get GITHUB_WORKSPACE env variable');
-    }
-    return workspaceDirectory;
-}
-exports.getWorkSpaceDirectory = getWorkSpaceDirectory;
-//# sourceMappingURL=internal-config-variables.js.map
-
-/***/ }),
-
 /***/ 742:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -10674,7 +9814,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
 var endpoint = __webpack_require__(385);
-var universalUserAgent = __webpack_require__(392);
+var universalUserAgent = __webpack_require__(211);
 var isPlainObject = _interopDefault(__webpack_require__(696));
 var nodeFetch = _interopDefault(__webpack_require__(454));
 var requestError = __webpack_require__(463);
@@ -10884,13 +10024,6 @@ function getFirstPage (octokit, link, headers) {
   return getPage(octokit, link, 'first', headers)
 }
 
-
-/***/ }),
-
-/***/ 794:
-/***/ (function(module) {
-
-module.exports = require("stream");
 
 /***/ }),
 
@@ -25366,6 +24499,14 @@ function registerPlugin(plugins, pluginFunction) {
 
 /***/ }),
 
+/***/ 856:
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+module.exports = __webpack_require__(141);
+
+
+/***/ }),
+
 /***/ 863:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -26664,134 +25805,6 @@ function hasNextPage (link) {
 
 /***/ }),
 
-/***/ 931:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const core_1 = __webpack_require__(470);
-const fs_1 = __webpack_require__(747);
-const http_client_1 = __webpack_require__(539);
-const auth_1 = __webpack_require__(226);
-const internal_config_variables_1 = __webpack_require__(717);
-/**
- * Parses a env variable that is a number
- */
-function parseEnvNumber(key) {
-    const value = Number(process.env[key]);
-    if (Number.isNaN(value) || value < 0) {
-        return undefined;
-    }
-    return value;
-}
-exports.parseEnvNumber = parseEnvNumber;
-/**
- * Various utility functions to help with the necessary API calls
- */
-function getApiVersion() {
-    return '6.0-preview';
-}
-exports.getApiVersion = getApiVersion;
-function isSuccessStatusCode(statusCode) {
-    if (!statusCode) {
-        return false;
-    }
-    return statusCode >= 200 && statusCode < 300;
-}
-exports.isSuccessStatusCode = isSuccessStatusCode;
-function isRetryableStatusCode(statusCode) {
-    if (!statusCode) {
-        return false;
-    }
-    const retryableStatusCodes = [
-        http_client_1.HttpCodes.BadGateway,
-        http_client_1.HttpCodes.ServiceUnavailable,
-        http_client_1.HttpCodes.GatewayTimeout
-    ];
-    return retryableStatusCodes.includes(statusCode);
-}
-exports.isRetryableStatusCode = isRetryableStatusCode;
-function getContentRange(start, end, total) {
-    // Format: `bytes start-end/fileSize
-    // start and end are inclusive
-    // For a 200 byte chunk starting at byte 0:
-    // Content-Range: bytes 0-199/200
-    return `bytes ${start}-${end}/${total}`;
-}
-exports.getContentRange = getContentRange;
-function getRequestOptions(contentType, contentLength, contentRange) {
-    const requestOptions = {
-        Accept: `application/json;api-version=${getApiVersion()}`
-    };
-    if (contentType) {
-        requestOptions['Content-Type'] = contentType;
-    }
-    if (contentLength) {
-        requestOptions['Content-Length'] = contentLength;
-    }
-    if (contentRange) {
-        requestOptions['Content-Range'] = contentRange;
-    }
-    return requestOptions;
-}
-exports.getRequestOptions = getRequestOptions;
-function createHttpClient() {
-    return new http_client_1.HttpClient('action/artifact', [
-        new auth_1.BearerCredentialHandler(internal_config_variables_1.getRuntimeToken())
-    ]);
-}
-exports.createHttpClient = createHttpClient;
-function getArtifactUrl() {
-    const artifactUrl = `${internal_config_variables_1.getRuntimeUrl()}_apis/pipelines/workflows/${internal_config_variables_1.getWorkFlowRunId()}/artifacts?api-version=${getApiVersion()}`;
-    core_1.debug(`Artifact Url: ${artifactUrl}`);
-    return artifactUrl;
-}
-exports.getArtifactUrl = getArtifactUrl;
-/**
- * Invalid characters that cannot be in the artifact name or an uploaded file. Will be rejected
- * from the server if attempted to be sent over. These characters are not allowed due to limitations with certain
- * file systems such as NTFS. To maintain platform-agnostic behavior, all characters that are not supported by an
- * individual filesystem/platform will not be supported on all fileSystems/platforms
- */
-const invalidCharacters = ['\\', '/', '"', ':', '<', '>', '|', '*', '?', ' '];
-/**
- * Scans the name of the item being uploaded to make sure there are no illegal characters
- */
-function checkArtifactName(name) {
-    if (!name) {
-        throw new Error(`Artifact name: ${name}, is incorrectly provided`);
-    }
-    for (const invalidChar of invalidCharacters) {
-        if (name.includes(invalidChar)) {
-            throw new Error(`Artifact name is not valid: ${name}. Contains character: "${invalidChar}". Invalid characters include: ${invalidCharacters.toString()}.`);
-        }
-    }
-}
-exports.checkArtifactName = checkArtifactName;
-function createDirectoriesForArtifact(directories) {
-    return __awaiter(this, void 0, void 0, function* () {
-        for (const directory of directories) {
-            yield fs_1.promises.mkdir(directory, {
-                recursive: true
-            });
-        }
-    });
-}
-exports.createDirectoriesForArtifact = createDirectoriesForArtifact;
-//# sourceMappingURL=internal-utils.js.map
-
-/***/ }),
-
 /***/ 948:
 /***/ (function(module) {
 
@@ -27278,7 +26291,7 @@ module.exports.shellSync = (cmd, opts) => handleShell(module.exports.sync, cmd, 
 
 "use strict";
 
-const {PassThrough} = __webpack_require__(794);
+const {PassThrough} = __webpack_require__(413);
 
 module.exports = options => {
 	options = Object.assign({}, options);

@@ -1,19 +1,18 @@
-import * as artifact from "@actions/artifact";
 import * as core from "@actions/core";
 import { exec } from "@actions/exec";
 import * as github from "@actions/github";
 
 async function main() {
-	const octopusUrl: string = core.getInput("OCTOPUS_URL", { required: true });
-	const octopusApiKey: string = core.getInput("OCTOPUS_APIKEY", { required: true });
-	const solutionPath: string = core.getInput("SOLUTION_PATH", { required: true });
-	const project: string = core.getInput("PROJECT", { required: false });
-	const deployTo: string = core.getInput("DEPLOY_TO", { required: false });
-	const msTeamsWebhook: string = core.getInput("MS_TEAMS_WEBHOOK", { required: false });
-	const context = github.context;
-	const repo = context.repo.repo;
-	const projectName = project ? project : repo;
 	try {
+		const octopusUrl: string = core.getInput("OCTOPUS_URL", { required: true });
+		const octopusApiKey: string = core.getInput("OCTOPUS_APIKEY", { required: true });
+		const solutionPath: string = core.getInput("SOLUTION_PATH", { required: true });
+		const project: string = core.getInput("PROJECT", { required: false });
+		const deployTo: string = core.getInput("DEPLOY_TO", { required: false });
+		const msTeamsWebhook: string = core.getInput("MS_TEAMS_WEBHOOK", { required: false });
+		const context = github.context;
+		const repo = context.repo.repo;
+		const projectName = project ? project : repo;
 
 		if (context.ref.indexOf("refs/tags/") === -1) {
 			throw new Error("Unable to get a version number");
@@ -35,26 +34,8 @@ async function main() {
 		core.info("✅ complete");
 	} catch (err) {
 		core.error("❌ Failed");
-		if (msTeamsWebhook) {
-			sendTeamsNotification(projectName, `Failed to deploy to Octopus (ref: ${context.ref}) `, msTeamsWebhook);
-		}
 		core.setFailed(err.message);
 	}
-}
-
-async function downloadArtifact(artifactName: string) {
-	core.info(`Downloading package artifact ${artifactName}...`);
-	const artifactClient = artifact.create();
-	try {
-		const response = await artifactClient.downloadArtifact(artifactName);
-		core.info(`Downloaded ${response.artifactName}`);
-	} catch (error) {
-		core.error("❌ Could not retrieve artifact");
-		core.setFailed(error.message);
-
-	}
-	await exec(`ls`);
-	await exec(`pwd`);
 }
 
 /**

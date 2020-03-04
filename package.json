@@ -8,7 +8,6 @@
         "build": "ncc build src\\main.ts"
     },
     "dependencies": {
-        "@actions/artifact": "0.1.0",
         "@actions/core": "1.2.3",
         "@actions/exec": "1.0.3",
         "@actions/github": "2.1.1",
