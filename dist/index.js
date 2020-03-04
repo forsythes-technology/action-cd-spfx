@@ -2615,7 +2615,7 @@ function main() {
         catch (err) {
             core.error("❌ Failed");
             if (msTeamsWebhook) {
-                sendTeamsNotification(projectName, `❌ Failed to deploy to Octopus (ref: ${context.ref})`, msTeamsWebhook);
+                sendTeamsNotification(projectName, `Failed to deploy to Octopus (ref: ${context.ref}) `, msTeamsWebhook);
             }
             core.setFailed(err.message);
         }
