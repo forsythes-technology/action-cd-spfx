@@ -1,0 +1,23 @@
+{
+    "name": "action-octopus-deploy",
+    "version": "0.1.0",
+    "description": "GitHub Action to deploy a package to Octopus",
+    "main": "dist/index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "ncc build src\\main.ts"
+    },
+    "dependencies": {
+        "@actions/artifact": "0.1.0",
+        "@actions/core": "1.2.3",
+        "@actions/exec": "1.0.3",
+        "@actions/github": "2.1.1",
+        "@actions/io": "1.0.2"
+    },
+    "devDependencies": {
+        "@types/node": "^13.1.6",
+        "@zeit/ncc": "^0.21.0",
+        "tslint": "^5.20.1",
+        "typescript": "^3.7.4"
+    }
+}

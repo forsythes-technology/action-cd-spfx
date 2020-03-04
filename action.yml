@@ -1,0 +1,24 @@
+name: 'Octopus Deploy'
+description: 'GitHub Action to deploy a package to Octopus'
+inputs:
+  OCTOPUS_URL:  
+    description: 'Octopus url'
+    required: true
+  OCTOPUS_APIKEY:  
+    description: 'Api Key'
+    required: true
+  SOLUTION_PATH:  
+    description: 'Solution path, e.g. dist, sharepoint/solution, build'
+    required: true  
+  DEPLOY_TO:  
+    description: 'If set, Octopus will attempt to auomtatically deploy to this environment'
+    required: false
+  MS_TEAMS_WEBHOOK:  
+    description: 'If set, A MS Teams notification will be sent to this webhook'
+    required: false
+runs:
+  using: "node12"
+  main: "dist/index.js"
+branding:
+  icon: 'package'  
+  color: 'blue'
