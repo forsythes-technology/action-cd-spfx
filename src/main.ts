@@ -1,6 +1,7 @@
 import * as core from "@actions/core";
 import { exec } from "@actions/exec";
 import * as github from "@actions/github";
+import { sendTeamsNotification } from "./sendNotification";
 
 async function main() {
 	try {
@@ -36,17 +37,6 @@ async function main() {
 		core.error("❌ Failed");
 		core.setFailed(err.message);
 	}
-}
-
-/**
- * Sends a MS Teams notification
- * @param title
- * @param body
- */
-async function sendTeamsNotification(title: string, body: string, webhookUrl: string) {
-	const data = `"{ '@context': 'http://schema.org/extensions', '@type': 'MessageCard', 'title': '${title}', 'text': '${body}' }"`;
-	core.info("Sending Teams notification...");
-	await exec(`curl --url "${webhookUrl}" -d ${data}`);
 }
 
 main();

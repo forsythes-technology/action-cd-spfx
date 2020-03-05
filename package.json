@@ -11,7 +11,9 @@
         "@actions/core": "1.2.3",
         "@actions/exec": "1.0.3",
         "@actions/github": "2.1.1",
-        "@actions/io": "1.0.2"
+        "@actions/io": "1.0.2",
+        "@types/request": "^2.48.4",
+        "request": "2.88.2"
     },
     "devDependencies": {
         "@types/node": "^13.1.6",
