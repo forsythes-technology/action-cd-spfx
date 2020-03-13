@@ -10,6 +10,9 @@ inputs:
   SOLUTION_PATH:  
     description: 'Solution path, e.g. dist, sharepoint/solution, build'
     required: true  
+  PROJECT:  
+    description: 'The Octopus project to deploy to, if omitted repo name is used instead'
+    required: false
   DEPLOY_TO:  
     description: 'If set, Octopus will attempt to auomtatically deploy to this environment'
     required: false
